@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASTROCADE // ITIL Inputs & Outputs Match-Up</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-pink: #ff007f;
+            --neon-purple: #b500ff;
+            --neon-green: #00ff66;
+            --neon-yellow: #ffe600;
+            --bg-dark: #070514;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #e2e8f0;
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 20%, rgba(181, 0, 255, 0.16) 0%, transparent 35%),
+                radial-gradient(circle at 85% 80%, rgba(0, 243, 255, 0.16) 0%, transparent 35%),
+                linear-gradient(rgba(0, 243, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.04) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+        }
+
+        .font-arcade {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .font-pixel {
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        /* CRT Scanline Overlay */
+        .scanlines::after {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 40;
+            pointer-events: none;
+            opacity: 0.45;
+        }
+
+        .neon-border-cyan {
+            border: 2px solid var(--neon-cyan);
+            box-shadow: 0 0 12px rgba(0, 243, 255, 0.35), inset 0 0 10px rgba(0, 243, 255, 0.15);
+        }
+
+        .neon-border-pink {
+            border: 2px solid var(--neon-pink);
+            box-shadow: 0 0 12px rgba(255, 0, 127, 0.35), inset 0 0 10px rgba(255, 0, 127, 0.15);
+        }
+
+        .neon-border-green {
+            border: 2px solid var(--neon-green);
+            box-shadow: 0 0 14px rgba(0, 255, 102, 0.45), inset 0 0 10px rgba(0, 255, 102, 0.2);
+        }
+
+        .neon-text-cyan {
+            color: var(--neon-cyan);
+            text-shadow: 0 0 8px rgba(0, 243, 255, 0.7);
+        }
+
+        .neon-text-pink {
+            color: var(--neon-pink);
+            text-shadow: 0 0 8px rgba(255, 0, 127, 0.7);
+        }
+
+        /* Arcade Card States */
+        .arcade-card {
+            transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            background: rgba(15, 12, 36, 0.85);
+            backdrop-filter: blur(8px);
+        }
+
+        .arcade-card:hover:not(.matched):not(.disabled) {
+            transform: translateY(-2px) scale(1.01);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 18px rgba(0, 243, 255, 0.45);
+        }
+
+        .arcade-card.selected {
+            border-color: var(--neon-yellow) !important;
+            box-shadow: 0 0 22px rgba(255, 230, 0, 0.7), inset 0 0 12px rgba(255, 230, 0, 0.25) !important;
+            transform: scale(1.02);
+        }
+
+        .arcade-card.matched {
+            border-color: var(--neon-green) !important;
+            background: rgba(0, 255, 102, 0.1) !important;
+            box-shadow: 0 0 16px rgba(0, 255, 102, 0.4) !important;
+            cursor: default;
+        }
+
+        .arcade-card.wrong {
+            animation: shake 0.4s ease-in-out;
+            border-color: #ff2a2a !important;
+            box-shadow: 0 0 20px rgba(255, 42, 42, 0.8) !important;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-6px); }
+            80% { transform: translateX(6px); }
+        }
+
+        /* Flip Card 3D Effect for Memory Mode */
+        .flip-card {
+            perspective: 1000px;
+            min-height: 155px;
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 155px;
+            transition: transform 0.55s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .flip-card.flipped .flip-card-inner,
+        .flip-card.matched .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .flip-card-back {
+            transform: rotateY(180deg);
+        }
+
+        /* Starfield Canvas & Laser Overlay */
+        #starfield-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .laser-line {
+            stroke-dasharray: 8 6;
+            animation: laserFlow 0.7s linear infinite;
+            filter: drop-shadow(0 0 6px var(--neon-green));
+        }
+
+        @keyframes laserFlow {
+            to { stroke-dashoffset: -28; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #070514;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e1b4b;
+            border: 1px solid var(--neon-cyan);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body id="app-body" class="scanlines min-h-screen flex flex-col justify-between relative">
+
+    <!-- Animated Starfield Background Canvas -->
+    <canvas id="starfield-canvas"></canvas>
+
+    <!-- Top Astrocade Header Bar -->
+    <header class="border-b border-cyan-500/30 bg-[#090619]/90 backdrop-blur-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500 via-purple-600 to-pink-500 p-0.5 shadow-lg shadow-cyan-500/30">
+                    <div class="w-full h-full bg-[#070514] rounded-[10px] flex items-center justify-center">
+                        <i class="fa-solid fa-gamepad text-cyan-400 text-xl animate-pulse"></i>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-pixel text-[10px] tracking-widest px-2 py-0.5 rounded bg-pink-500/20 text-pink-400 border border-pink-500/40">ASTROCADE EDITION</span>
+                        <span class="text-xs font-semibold text-cyan-300/80">ICT654 // SLIDE 27 ONLY</span>
+                    </div>
+                    <h1 class="font-arcade text-lg md:text-2xl font-black tracking-wider text-white">
+                        ITIL <span class="neon-text-cyan">INPUTS & OUTPUTS</span> MATCH-UP
+                    </h1>
+                </div>
+            </div>
+
+            <!-- Navigation & Utility Buttons -->
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="toggleInstructionsPanel()" id="btn-instructions" class="px-3.5 py-2 rounded-lg font-arcade text-xs font-bold tracking-wider transition-all bg-slate-900/90 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-question"></i> HOW TO PLAY
+                </button>
+                <button onclick="openAnswerKeyModal()" id="btn-answerkey" class="px-3.5 py-2 rounded-lg font-arcade text-xs font-bold tracking-wider transition-all bg-pink-500/20 text-pink-300 border border-pink-500/50 hover:bg-pink-500/30 hover:border-pink-400 flex items-center gap-1.5 shadow-lg shadow-pink-500/10">
+                    <i class="fa-solid fa-key"></i> ANSWER KEY
+                </button>
+                <button onclick="toggleScanlines()" id="crtToggleBtn" class="px-2.5 py-2 rounded-lg bg-slate-900 border border-cyan-500/40 text-cyan-300 hover:text-white hover:border-cyan-400 font-arcade text-[10px]" title="Toggle CRT Scanlines">
+                    CRT: ON
+                </button>
+                <button onclick="toggleSound()" id="soundToggleBtn" class="p-2 rounded-lg bg-slate-900 border border-purple-500/40 text-purple-300 hover:text-white hover:border-purple-400" title="Toggle Arcade Sound Effects">
+                    <i class="fa-solid fa-volume-high text-cyan-400" id="soundIcon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl w-full mx-auto px-4 py-6 flex-grow relative z-10">
+
+        <!-- ==================== STANDALONE ARCADE GAME VIEW ==================== -->
+        <section id="tab-game" class="space-y-5">
+            
+            <!-- Collapsible Game Instructions Panel (Visible on Game Screen) -->
+            <div id="instructions-panel" class="bg-[#0c0822]/95 neon-border-cyan rounded-2xl p-4 md:p-5 transition-all">
+                <div class="flex items-center justify-between gap-2 border-b border-cyan-500/25 pb-3 mb-3">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-300">
+                            <i class="fa-solid fa-book-open-reader"></i>
+                        </span>
+                        <div>
+                            <h2 class="font-arcade text-xs md:text-sm font-bold text-white tracking-wider">HOW TO PLAY (GAME INSTRUCTIONS)</h2>
+                            <p class="text-xs text-cyan-300/80">Subtopic: Change Management Inputs and Outputs (Slide 27)</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleInstructionsPanel()" class="text-xs font-arcade text-slate-400 hover:text-white px-2.5 py-1 rounded border border-slate-700 hover:border-cyan-400">
+                        HIDE <i class="fa-solid fa-chevron-up ml-1"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs md:text-sm text-slate-200">
+                    <div class="bg-slate-950/80 border border-cyan-500/30 rounded-xl p-3 flex items-start gap-2.5">
+                        <span class="font-arcade text-xs font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shrink-0">STEP 1</span>
+                        <p>Select any <strong>Input / Output Term (1–5)</strong> in the left column from Slide 27 to arm your laser target.</p>
+                    </div>
+                    <div class="bg-slate-950/80 border border-pink-500/30 rounded-xl p-3 flex items-start gap-2.5">
+                        <span class="font-arcade text-xs font-bold px-2 py-0.5 rounded bg-pink-500/20 text-pink-300 border border-pink-500/40 shrink-0">STEP 2</span>
+                        <p>Click its matching <strong>Randomized Definition (A–E)</strong> in the right column to lock the neon laser beam!</p>
+                    </div>
+                    <div class="bg-slate-950/80 border border-emerald-500/30 rounded-xl p-3 flex items-start gap-2.5">
+                        <span class="font-arcade text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">STEP 3</span>
+                        <p>Match all <strong>5 pairs</strong> for a high score, switch to <strong>Memory Flip Mode</strong>, or click <strong>Answer Key</strong> anytime.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HUD Stats Bar & Mode Switcher -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center bg-[#0c0822]/90 border border-cyan-500/30 rounded-2xl p-4 shadow-xl">
+                
+                <!-- Arcade Telemetry Counters -->
+                <div class="lg:col-span-7 grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    <!-- Score -->
+                    <div class="bg-slate-950/90 border border-cyan-500/30 rounded-xl p-2.5 text-center">
+                        <p class="text-[10px] font-arcade text-cyan-400 uppercase tracking-widest">SCORE</p>
+                        <p id="hud-score" class="font-arcade text-lg md:text-xl font-black text-white">0000</p>
+                    </div>
+                    <!-- Streak / Combo -->
+                    <div class="bg-slate-950/90 border border-pink-500/30 rounded-xl p-2.5 text-center">
+                        <p class="text-[10px] font-arcade text-pink-400 uppercase tracking-widest">COMBO</p>
+                        <p id="hud-combo" class="font-arcade text-lg md:text-xl font-black text-pink-300">x1</p>
+                    </div>
+                    <!-- Accuracy -->
+                    <div class="bg-slate-950/90 border border-yellow-500/30 rounded-xl p-2.5 text-center">
+                        <p class="text-[10px] font-arcade text-yellow-400 uppercase tracking-widest">ACCURACY</p>
+                        <p id="hud-accuracy" class="font-arcade text-lg md:text-xl font-black text-yellow-300">100%</p>
+                    </div>
+                    <!-- Pairs Matched -->
+                    <div class="bg-slate-950/90 border border-emerald-500/30 rounded-xl p-2.5 text-center">
+                        <p class="text-[10px] font-arcade text-emerald-400 uppercase tracking-widest">MATCHED</p>
+                        <p id="hud-matched" class="font-arcade text-lg md:text-xl font-black text-emerald-300">0 / 5</p>
+                    </div>
+                    <!-- Timer -->
+                    <div class="bg-slate-950/90 border border-purple-500/30 rounded-xl p-2.5 text-center col-span-2 sm:col-span-1">
+                        <p class="text-[10px] font-arcade text-purple-400 uppercase tracking-widest">TIME</p>
+                        <p id="hud-timer" class="font-arcade text-lg md:text-xl font-black text-purple-200">00:00</p>
+                    </div>
+                </div>
+
+                <!-- Mode Selector & Action Buttons -->
+                <div class="lg:col-span-5 flex flex-wrap items-center justify-end gap-2">
+                    <div class="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800">
+                        <button onclick="setGameMode('connect')" id="modeBtn-connect" class="px-3 py-1.5 rounded-lg font-arcade text-xs font-bold transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow">
+                            <i class="fa-solid fa-link mr-1"></i> LASER MATCH
+                        </button>
+                        <button onclick="setGameMode('memory')" id="modeBtn-memory" class="px-3 py-1.5 rounded-lg font-arcade text-xs font-bold transition-all text-slate-400 hover:text-white">
+                            <i class="fa-solid fa-clone mr-1"></i> MEMORY FLIP
+                        </button>
+                    </div>
+
+                    <button onclick="resetAndShuffleGame(false)" class="px-3 py-2 rounded-xl font-arcade text-xs font-bold bg-slate-900 hover:bg-slate-800 text-cyan-300 border border-cyan-500/40 flex items-center gap-1.5 active:scale-95 transition-all" title="Reset to Default Randomized Order (1→C, 2→E, 3→A, 4→B, 5→D)">
+                        <i class="fa-solid fa-rotate-left"></i> RESET
+                    </button>
+
+                    <button onclick="resetAndShuffleGame(true)" class="px-3.5 py-2 rounded-xl font-arcade text-xs font-bold bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white shadow-lg shadow-pink-600/30 flex items-center gap-1.5 active:scale-95 transition-all">
+                        <i class="fa-solid fa-shuffle"></i> SHUFFLE
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Status Banner -->
+            <div id="status-banner" class="bg-gradient-to-r from-cyan-950/60 via-purple-950/60 to-pink-950/60 border border-cyan-500/30 rounded-xl px-4 py-2.5 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+                    <p id="status-message" class="text-sm md:text-base font-semibold text-cyan-100">
+                        MISSION BRIEF: Select an <span class="text-cyan-400 font-bold">INPUT / OUTPUT TERM (1–5)</span> on the left and connect its laser to the matching <span class="text-pink-400 font-bold">DEFINITION (A–E)</span> on the right!
+                    </p>
+                </div>
+                <span class="text-xs font-arcade text-cyan-300/80 hidden sm:inline">SLIDE 27: INPUTS & OUTPUTS</span>
+            </div>
+
+            <!-- MODE A: LASER CONNECT BOARD (2 Columns + SVG Laser Beam Overlay) -->
+            <div id="board-connect-wrapper" class="relative">
+                <!-- SVG Laser Overlay -->
+                <svg id="laser-svg" class="absolute inset-0 w-full h-full pointer-events-none z-20"></svg>
+
+                <div id="board-connect" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start relative z-10">
+                    <!-- Left Column: 5 Input & Output Terms -->
+                    <div class="lg:col-span-5 space-y-3">
+                        <div class="flex items-center justify-between px-2">
+                            <h2 class="font-arcade text-sm uppercase tracking-wider neon-text-cyan flex items-center gap-2">
+                                <i class="fa-solid fa-microchip"></i> Terms: Inputs & Outputs (1–5)
+                            </h2>
+                            <span class="text-xs text-slate-400">Slide 27</span>
+                        </div>
+                        <div id="terms-column" class="space-y-3"></div>
+                    </div>
+
+                    <!-- Center Divider / Laser Beam Conduit on Desktop -->
+                    <div class="hidden lg:flex lg:col-span-2 flex-col items-center justify-center py-28 space-y-6 opacity-75">
+                        <div class="w-0.5 h-24 bg-gradient-to-b from-transparent via-cyan-500 to-pink-500"></div>
+                        <div class="w-12 h-12 rounded-full border border-cyan-400/50 bg-slate-950 flex flex-col items-center justify-center font-arcade text-[9px] text-cyan-300 shadow-lg shadow-cyan-500/20">
+                            <i class="fa-solid fa-bolt text-sm text-pink-400"></i>
+                            <span>LASER</span>
+                        </div>
+                        <div class="w-0.5 h-24 bg-gradient-to-b from-pink-500 via-purple-500 to-transparent"></div>
+                    </div>
+
+                    <!-- Right Column: 5 Randomized Definitions -->
+                    <div class="lg:col-span-5 space-y-3">
+                        <div class="flex items-center justify-between px-2">
+                            <h2 class="font-arcade text-sm uppercase tracking-wider neon-text-pink flex items-center gap-2">
+                                <i class="fa-solid fa-database"></i> Randomized Definitions (A–E)
+                            </h2>
+                            <span class="text-xs text-slate-400">Click to lock beam</span>
+                        </div>
+                        <div id="definitions-column" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODE B: MEMORY FLIP GRID (10 Cards) -->
+            <div id="board-memory" class="hidden">
+                <div id="memory-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Answer Key Modal Overlay -->
+    <div id="answerkey-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-[#0c0822] neon-border-pink rounded-2xl max-w-4xl w-full p-5 md:p-7 space-y-5 my-8 max-h-[90vh] overflow-y-auto">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-pink-500/30 pb-4">
+                <div>
+                    <span class="text-[11px] font-arcade text-cyan-400 uppercase tracking-widest">ICT654 // SLIDE 27: CHANGE MANAGEMENT INPUTS & OUTPUTS</span>
+                    <h2 class="font-arcade text-xl md:text-2xl font-black text-white mt-0.5">OFFICIAL ANSWER KEY (5 PAIRS)</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="modal-key-badge" class="font-arcade text-xs px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                        Key: 1 → C | 2 → E | 3 → A | 4 → B | 5 → D
+                    </span>
+                    <button onclick="closeAnswerKeyModal()" class="w-9 h-9 rounded-xl bg-slate-900 border border-slate-700 hover:border-pink-400 text-slate-300 hover:text-white flex items-center justify-center">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Current Board Key Banner -->
+            <div class="bg-slate-950/90 border border-cyan-500/30 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span class="text-slate-300 font-medium"><i class="fa-solid fa-crosshairs text-cyan-400 mr-1.5"></i>Standard Randomized Order Key: <strong class="text-emerald-300 font-arcade">1 → C, 2 → E, 3 → A, 4 → B, 5 → D</strong></span>
+                <span id="live-board-key-text" class="font-arcade text-cyan-300"></span>
+            </div>
+
+            <!-- 5 Matched Pairs List -->
+            <div id="answer-key-list" class="space-y-3"></div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="closeAnswerKeyModal()" class="px-5 py-2.5 rounded-xl font-arcade text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-lg shadow-cyan-500/30">
+                    <i class="fa-solid fa-gamepad mr-1.5"></i> BACK TO GAME
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Victory Modal Overlay -->
+    <div id="victory-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-[#0c0822] neon-border-green rounded-2xl max-w-md w-full p-6 md:p-8 text-center space-y-5 transform transition-all">
+            <div class="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-400 mx-auto flex items-center justify-center text-emerald-400 text-3xl shadow-lg shadow-emerald-500/30">
+                <i class="fa-solid fa-trophy animate-bounce"></i>
+            </div>
+            <div>
+                <p class="font-pixel text-[10px] text-emerald-400 tracking-widest uppercase">STAGE CLEARED // 100% SYNC</p>
+                <h2 class="font-arcade text-2xl md:text-3xl font-black text-white mt-1">MISSION COMPLETE!</h2>
+                <p class="text-sm text-slate-300 mt-1">You mastered all 5 Change Management Inputs & Outputs from Slide 27!</p>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 bg-slate-950/90 p-3 rounded-xl border border-slate-800">
+                <div>
+                    <p class="text-[10px] font-arcade text-slate-400">FINAL SCORE</p>
+                    <p id="modal-score" class="font-arcade text-lg font-bold text-cyan-400">1000</p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-arcade text-slate-400">TIME TAKEN</p>
+                    <p id="modal-time" class="font-arcade text-lg font-bold text-purple-300">00:24</p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-arcade text-slate-400">ACCURACY</p>
+                    <p id="modal-accuracy" class="font-arcade text-lg font-bold text-emerald-400">100%</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                <button onclick="closeVictoryModalAndReplay()" class="flex-1 py-3 rounded-xl font-arcade text-xs font-bold bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 shadow-lg shadow-emerald-500/30 hover:opacity-95">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> PLAY AGAIN (SHUFFLE)
+                </button>
+                <button onclick="closeVictoryModalAndViewKey()" class="py-3 px-4 rounded-xl font-arcade text-xs font-bold bg-slate-900 text-pink-400 border border-pink-500/40 hover:border-pink-400">
+                    <i class="fa-solid fa-key mr-1"></i> ANSWER KEY
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 bg-[#060410]/90 py-4 px-4 text-center text-xs text-slate-400 relative z-10">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p class="font-arcade text-[11px] text-slate-400">ASTROCADE ENGINE // ICT654 SERVICE TRANSITION (PART 1)</p>
+            <p>Subtopic Focus: <span class="text-cyan-400 font-semibold">Change Management Inputs and Outputs (Slide 27)</span></p>
+        </div>
+    </footer>
+
+    <script>
+        // ============================================================================
+        // 1. DATASET: EXACT 5 INPUT & OUTPUT PAIRS FROM SLIDE 27 (ENGLISH)
+        // ============================================================================
+        const PAIRS_DATA = [
+            {
+                id: 1,
+                code: "INPUT 01",
+                category: "INPUT",
+                term: "RFCs (Request for Change) [Input]",
+                slideRef: "Slide 27 • Process Input",
+                icon: "fa-file-import",
+                defaultLetter: "C",
+                definition: "Formal requests submitted as a primary input to initiate the Change Management process."
+            },
+            {
+                id: 2,
+                code: "INPUT 02",
+                category: "INPUT",
+                term: "Plans & Change Schedule [Input]",
+                slideRef: "Slide 27 • Process Input",
+                icon: "fa-calendar-days",
+                defaultLetter: "E",
+                definition: "Input documents comprising change, transition, release and deployment plans alongside the Change Schedule."
+            },
+            {
+                id: 3,
+                code: "INPUT 03",
+                category: "INPUT",
+                term: "Assets, CIs & Evaluation Report [Input]",
+                slideRef: "Slide 27 • Process Input",
+                icon: "fa-server",
+                defaultLetter: "A",
+                definition: "Configuration items, service assets, and evaluation reports fed into the Change Management process."
+            },
+            {
+                id: 4,
+                code: "OUTPUT 01",
+                category: "OUTPUT",
+                term: "Rejected or Approved RFCs & Updated Schedule [Output]",
+                slideRef: "Slide 27 • Process Output",
+                icon: "fa-clipboard-check",
+                defaultLetter: "B",
+                definition: "Process outputs consisting of authorization decisions on RFCs and the revised Change Schedule."
+            },
+            {
+                id: 5,
+                code: "OUTPUT 02",
+                category: "OUTPUT",
+                term: "New/Changed Services & Change Records [Output]",
+                slideRef: "Slide 27 • Process Output",
+                icon: "fa-boxes-packing",
+                defaultLetter: "D",
+                definition: "Final outputs delivering new or modified services, CIs, assets, change decisions, actions, documents, records, and reports."
+            }
+        ];
+
+        // Default Randomized Order so that:
+        // 1 -> C (index 2), 2 -> E (index 4), 3 -> A (index 0), 4 -> B (index 1), 5 -> D (index 3)
+        // Therefore, A = Pair 3, B = Pair 4, C = Pair 1, D = Pair 5, E = Pair 2
+        const DEFAULT_SHUFFLE_IDS = [3, 4, 1, 5, 2];
+
+        function getDefaultShuffledDefinitions() {
+            return DEFAULT_SHUFFLE_IDS.map(id => PAIRS_DATA.find(p => p.id === id));
+        }
+
+        // ============================================================================
+        // 2. ANIMATED RETRO STARFIELD BACKGROUND CANVAS
+        // ============================================================================
+        const starCanvas = document.getElementById('starfield-canvas');
+        const starCtx = starCanvas.getContext('2d');
+        let stars = [];
+
+        function initStarfield() {
+            starCanvas.width = window.innerWidth;
+            starCanvas.height = window.innerHeight;
+            stars = [];
+            const count = Math.min(110, Math.floor((starCanvas.width * starCanvas.height) / 12000));
+            for (let i = 0; i < count; i++) {
+                stars.push({
+                    x: Math.random() * starCanvas.width,
+                    y: Math.random() * starCanvas.height,
+                    r: Math.random() * 1.6 + 0.4,
+                    speed: Math.random() * 0.35 + 0.1,
+                    alpha: Math.random() * 0.7 + 0.2,
+                    hue: Math.random() > 0.5 ? '#00f3ff' : '#ff007f'
+                });
+            }
+        }
+
+        function animateStarfield() {
+            starCtx.clearRect(0, 0, starCanvas.width, starCanvas.height);
+            for (let i = 0; i < stars.length; i++) {
+                const s = stars[i];
+                s.y += s.speed;
+                if (s.y > starCanvas.height) {
+                    s.y = 0;
+                    s.x = Math.random() * starCanvas.width;
+                }
+                starCtx.globalAlpha = s.alpha;
+                starCtx.fillStyle = s.hue;
+                starCtx.beginPath();
+                starCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                starCtx.fill();
+            }
+            requestAnimationFrame(animateStarfield);
+        }
+
+        function toggleScanlines() {
+            const body = document.getElementById('app-body');
+            const btn = document.getElementById('crtToggleBtn');
+            const isActive = body.classList.toggle('scanlines');
+            btn.textContent = isActive ? 'CRT: ON' : 'CRT: OFF';
+            btn.className = isActive
+                ? 'px-2.5 py-2 rounded-lg bg-slate-900 border border-cyan-500/40 text-cyan-300 hover:text-white hover:border-cyan-400 font-arcade text-[10px]'
+                : 'px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-500 hover:text-white font-arcade text-[10px]';
+        }
+
+        // ============================================================================
+        // 3. SYNTHESIZED WEB AUDIO ARCADE SOUND EFFECTS (NO EXTERNAL MP3 NEEDED)
+        // ============================================================================
+        let soundEnabled = true;
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) audioCtx = new AudioContextClass();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                if (type === 'select') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(520, now);
+                    osc.frequency.exponentialRampToValueAtTime(780, now + 0.08);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+                    osc.start(now);
+                    osc.stop(now + 0.09);
+                } else if (type === 'match') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now);       // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+                    osc.frequency.setValueAtTime(1046.50, now + 0.24);// C6
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+                    osc.start(now);
+                    osc.stop(now + 0.42);
+                } else if (type === 'wrong') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.linearRampToValueAtTime(130, now + 0.25);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+                    osc.start(now);
+                    osc.stop(now + 0.28);
+                } else if (type === 'victory') {
+                    const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        const o = ctx.createOscillator();
+                        const g = ctx.createGain();
+                        o.type = 'square';
+                        o.connect(g);
+                        g.connect(ctx.destination);
+                        o.frequency.setValueAtTime(freq, now + idx * 0.1);
+                        g.gain.setValueAtTime(0.1, now + idx * 0.1);
+                        g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.12);
+                        o.start(now + idx * 0.1);
+                        o.stop(now + idx * 0.1 + 0.12);
+                    });
+                }
+            } catch (e) {
+                // Ignore audio errors if blocked by browser autoplay
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('soundIcon');
+            icon.className = soundEnabled ? 'fa-solid fa-volume-high text-cyan-400' : 'fa-solid fa-volume-xmark text-slate-500';
+            if (soundEnabled) playSound('select');
+        }
+
+        // ============================================================================
+        // 4. GAME STATE & UTILITY FUNCTIONS
+        // ============================================================================
+        let currentMode = 'connect'; // 'connect' or 'memory'
+        let score = 0;
+        let combo = 1;
+        let matchedCount = 0;
+        let attemptsCount = 0;
+        let selectedTermId = null;
+        let selectedDefId = null;
+        let matchedIds = new Set();
+        let activeConnectDefs = getDefaultShuffledDefinitions();
+
+        // Memory Mode State
+        let memoryFlippedCards = [];
+        let memoryLock = false;
+
+        // Timer State
+        let secondsElapsed = 0;
+        let timerInterval = null;
+        let timerStarted = false;
+
+        // Fisher-Yates Shuffle
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function startTimerIfNeeded() {
+            if (timerStarted) return;
+            timerStarted = true;
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            timerStarted = false;
+        }
+
+        function updateTimerDisplay() {
+            const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+            const secs = String(secondsElapsed % 60).padStart(2, '0');
+            document.getElementById('hud-timer').textContent = `${mins}:${secs}`;
+        }
+
+        function getAccuracyPercent() {
+            if (attemptsCount === 0) return 100;
+            return Math.min(100, Math.round((matchedCount / attemptsCount) * 100));
+        }
+
+        function updateHUD() {
+            document.getElementById('hud-score').textContent = String(score).padStart(4, '0');
+            document.getElementById('hud-combo').textContent = `x${combo}`;
+            document.getElementById('hud-accuracy').textContent = `${getAccuracyPercent()}%`;
+            document.getElementById('hud-matched').textContent = `${matchedCount} / ${PAIRS_DATA.length}`;
+        }
+
+        function updateStatus(msg, tone = 'info') {
+            const msgEl = document.getElementById('status-message');
+            msgEl.innerHTML = msg;
+            const banner = document.getElementById('status-banner');
+            banner.className = 'rounded-xl px-4 py-2.5 flex items-center justify-between transition-all ';
+            if (tone === 'success') {
+                banner.className += 'bg-emerald-950/70 border border-emerald-400/60 text-emerald-200';
+            } else if (tone === 'error') {
+                banner.className += 'bg-red-950/70 border border-red-400/60 text-red-200';
+            } else {
+                banner.className += 'bg-gradient-to-r from-cyan-950/60 via-purple-950/60 to-pink-950/60 border border-cyan-500/30';
+            }
+        }
+
+        // ============================================================================
+        // 5. MODE A: LASER CONNECT MODE + SVG LASER BEAMS
+        // ============================================================================
+        function renderConnectBoard(randomizeDefs = false) {
+            const termsCol = document.getElementById('terms-column');
+            const defsCol = document.getElementById('definitions-column');
+            termsCol.innerHTML = '';
+            defsCol.innerHTML = '';
+
+            if (randomizeDefs) {
+                activeConnectDefs = shuffleArray(PAIRS_DATA);
+            } else if (!activeConnectDefs || activeConnectDefs.length === 0) {
+                activeConnectDefs = getDefaultShuffledDefinitions();
+            }
+
+            // Left column: 5 Input/Output Terms (1 to 5)
+            PAIRS_DATA.forEach((item, index) => {
+                const isMatched = matchedIds.has(item.id);
+                const isInput = item.category === 'INPUT';
+                const pillColor = isInput
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/40';
+
+                const card = document.createElement('div');
+                card.id = `term-card-${item.id}`;
+                card.className = `arcade-card rounded-xl p-4 border border-cyan-500/40 cursor-pointer select-none ${isMatched ? 'matched' : ''}`;
+                card.onclick = () => handleTermClick(item.id);
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-cyan-500/15 border border-cyan-400/40 flex items-center justify-center text-cyan-300 shrink-0">
+                                <i class="fa-solid ${item.icon}"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-arcade text-[10px] tracking-widest uppercase px-2 py-0.5 rounded ${pillColor}">${item.code}</span>
+                                    <span class="text-xs text-slate-400">${item.slideRef}</span>
+                                </div>
+                                <h3 class="font-arcade text-sm md:text-base font-bold text-white mt-1">${item.term}</h3>
+                            </div>
+                        </div>
+                        <div id="term-badge-${item.id}" class="w-7 h-7 rounded-full border border-cyan-500/40 flex items-center justify-center font-arcade text-xs text-cyan-300 shrink-0">
+                            ${isMatched ? '<i class="fa-solid fa-check text-emerald-400"></i>' : (index + 1)}
+                        </div>
+                    </div>
+                `;
+                termsCol.appendChild(card);
+            });
+
+            // Right column: 5 Randomized Definitions (A to E)
+            const letters = ['A', 'B', 'C', 'D', 'E'];
+
+            activeConnectDefs.forEach((item, idx) => {
+                const isMatched = matchedIds.has(item.id);
+                const card = document.createElement('div');
+                card.id = `def-card-${item.id}`;
+                card.className = `arcade-card rounded-xl p-4 border border-pink-500/40 cursor-pointer select-none ${isMatched ? 'matched' : ''}`;
+                card.onclick = () => handleDefClick(item.id);
+
+                card.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <div id="def-badge-${item.id}" class="w-8 h-8 rounded-lg bg-pink-500/20 border border-pink-400/40 flex items-center justify-center font-arcade text-xs font-bold text-pink-300 shrink-0 mt-0.5">
+                            ${isMatched ? '<i class="fa-solid fa-check text-emerald-400"></i>' : letters[idx]}
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm md:text-base text-slate-100 leading-snug font-medium">${item.definition}</p>
+                        </div>
+                    </div>
+                `;
+                defsCol.appendChild(card);
+            });
+
+            setTimeout(drawLaserConnections, 50);
+        }
+
+        function drawLaserConnections() {
+            const svg = document.getElementById('laser-svg');
+            const wrapper = document.getElementById('board-connect-wrapper');
+            if (!svg || !wrapper || currentMode !== 'connect') return;
+
+            svg.innerHTML = '';
+            // Only draw visible laser lines on desktop 2-column layout
+            if (window.innerWidth < 1024) return;
+
+            const wrapperRect = wrapper.getBoundingClientRect();
+
+            matchedIds.forEach(pairId => {
+                const termEl = document.getElementById(`term-card-${pairId}`);
+                const defEl = document.getElementById(`def-card-${pairId}`);
+                if (!termEl || !defEl) return;
+
+                const tRect = termEl.getBoundingClientRect();
+                const dRect = defEl.getBoundingClientRect();
+
+                const x1 = tRect.right - wrapperRect.left;
+                const y1 = tRect.top + tRect.height / 2 - wrapperRect.top;
+                const x2 = dRect.left - wrapperRect.left;
+                const y2 = dRect.top + dRect.height / 2 - wrapperRect.top;
+
+                const cX1 = x1 + (x2 - x1) * 0.4;
+                const cX2 = x1 + (x2 - x1) * 0.6;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', `M ${x1} ${y1} C ${cX1} ${y1}, ${cX2} ${y2}, ${x2} ${y2}`);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', '#00ff66');
+                path.setAttribute('stroke-width', '2.5');
+                path.setAttribute('class', 'laser-line');
+                svg.appendChild(path);
+
+                // Endpoints glow dots
+                [ [x1, y1], [x2, y2] ].forEach(([cx, cy]) => {
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', cx);
+                    circle.setAttribute('cy', cy);
+                    circle.setAttribute('r', '4.5');
+                    circle.setAttribute('fill', '#00ff66');
+                    svg.appendChild(circle);
+                });
+            });
+        }
+
+        function handleTermClick(id) {
+            if (matchedIds.has(id)) return;
+            startTimerIfNeeded();
+            playSound('select');
+
+            selectedTermId = (selectedTermId === id) ? null : id;
+            highlightConnectSelections();
+
+            if (selectedTermId && selectedDefId) {
+                evaluateConnectPair(selectedTermId, selectedDefId);
+            }
+        }
+
+        function handleDefClick(id) {
+            if (matchedIds.has(id)) return;
+            startTimerIfNeeded();
+            playSound('select');
+
+            selectedDefId = (selectedDefId === id) ? null : id;
+            highlightConnectSelections();
+
+            if (selectedTermId && selectedDefId) {
+                evaluateConnectPair(selectedTermId, selectedDefId);
+            }
+        }
+
+        function highlightConnectSelections() {
+            PAIRS_DATA.forEach(item => {
+                const tCard = document.getElementById(`term-card-${item.id}`);
+                const dCard = document.getElementById(`def-card-${item.id}`);
+                if (tCard && !matchedIds.has(item.id)) {
+                    tCard.classList.toggle('selected', item.id === selectedTermId);
+                }
+                if (dCard && !matchedIds.has(item.id)) {
+                    dCard.classList.toggle('selected', item.id === selectedDefId);
+                }
+            });
+        }
+
+        function evaluateConnectPair(termId, defId) {
+            attemptsCount++;
+            const tCard = document.getElementById(`term-card-${termId}`);
+            const dCard = document.getElementById(`def-card-${defId}`);
+
+            if (termId === defId) {
+                // Correct Match!
+                playSound('match');
+                matchedIds.add(termId);
+                matchedCount++;
+                const pointsEarned = 200 * combo;
+                score += pointsEarned;
+                combo++;
+
+                tCard.classList.remove('selected');
+                dCard.classList.remove('selected');
+                tCard.classList.add('matched');
+                dCard.classList.add('matched');
+
+                document.getElementById(`term-badge-${termId}`).innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i>';
+                document.getElementById(`def-badge-${defId}`).innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i>';
+
+                const matchedObj = PAIRS_DATA.find(p => p.id === termId);
+                updateStatus(`LASER LOCK CONFIRMED! Matched <strong>${matchedObj.term}</strong> (+${pointsEarned} PTS)`, 'success');
+
+                selectedTermId = null;
+                selectedDefId = null;
+                updateHUD();
+                drawLaserConnections();
+
+                if (matchedCount === PAIRS_DATA.length) {
+                    handleStageClear();
+                }
+            } else {
+                // Mismatch
+                playSound('wrong');
+                combo = 1;
+                score = Math.max(0, score - 25);
+                updateHUD();
+
+                tCard.classList.remove('selected');
+                dCard.classList.remove('selected');
+                tCard.classList.add('wrong');
+                dCard.classList.add('wrong');
+
+                updateStatus(`MISMATCH DETECTED! Check Slide 27 Change Management Inputs & Outputs and try again.`, 'error');
+
+                selectedTermId = null;
+                selectedDefId = null;
+
+                setTimeout(() => {
+                    tCard.classList.remove('wrong');
+                    dCard.classList.remove('wrong');
+                }, 450);
+            }
+        }
+
+        // ============================================================================
+        // 6. MODE B: MEMORY FLIP CARDS MODE
+        // ============================================================================
+        function renderMemoryBoard() {
+            const grid = document.getElementById('memory-grid');
+            grid.innerHTML = '';
+            memoryFlippedCards = [];
+            memoryLock = false;
+
+            const deck = [];
+            PAIRS_DATA.forEach(item => {
+                deck.push({
+                    uid: `T-${item.id}`,
+                    pairId: item.id,
+                    type: 'TERM',
+                    label: item.term,
+                    sub: item.slideRef,
+                    icon: item.icon
+                });
+                deck.push({
+                    uid: `D-${item.id}`,
+                    pairId: item.id,
+                    type: 'DEFINITION',
+                    label: item.definition,
+                    sub: 'Slide 27 Definition',
+                    icon: 'fa-align-left'
+                });
+            });
+
+            const shuffledDeck = shuffleArray(deck);
+
+            shuffledDeck.forEach((cardData, idx) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'flip-card cursor-pointer select-none';
+                wrapper.id = `mem-card-${cardData.uid}`;
+                wrapper.onclick = () => handleMemoryFlip(cardData, wrapper);
+
+                const isTerm = cardData.type === 'TERM';
+                const borderClass = isTerm ? 'border-cyan-400/60 bg-cyan-950/40' : 'border-pink-400/60 bg-pink-950/40';
+                const badgeClass = isTerm ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-pink-500/20 text-pink-300 border-pink-500/40';
+
+                wrapper.innerHTML = `
+                    <div class="flip-card-inner">
+                        <!-- Face Down Front -->
+                        <div class="flip-card-front bg-[#100b29] border-2 border-purple-500/40 hover:border-cyan-400 p-4 shadow-lg">
+                            <div class="w-11 h-11 rounded-xl bg-purple-500/15 border border-purple-400/30 flex items-center justify-center text-purple-300 mb-2">
+                                <i class="fa-solid fa-bolt text-lg"></i>
+                            </div>
+                            <span class="font-arcade text-xs text-slate-400 tracking-widest">CARD #${String(idx + 1).padStart(2, '0')}</span>
+                            <span class="text-[10px] text-cyan-400/80 mt-1">CLICK TO FLIP</span>
+                        </div>
+                        <!-- Face Up Back -->
+                        <div class="flip-card-back border-2 ${borderClass} p-3.5 text-center overflow-y-auto">
+                            <span class="font-arcade text-[10px] px-2 py-0.5 rounded border ${badgeClass} mb-1.5">${cardData.type}</span>
+                            <p class="${isTerm ? 'font-arcade text-sm font-bold text-white' : 'text-xs text-slate-100 leading-snug'}">${cardData.label}</p>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(wrapper);
+            });
+        }
+
+        function handleMemoryFlip(cardData, element) {
+            if (memoryLock) return;
+            if (matchedIds.has(cardData.pairId)) return;
+            if (memoryFlippedCards.some(c => c.uid === cardData.uid)) return;
+
+            startTimerIfNeeded();
+            playSound('select');
+            element.classList.add('flipped');
+            memoryFlippedCards.push({ ...cardData, element });
+
+            if (memoryFlippedCards.length === 2) {
+                memoryLock = true;
+                attemptsCount++;
+                const [first, second] = memoryFlippedCards;
+
+                if (first.pairId === second.pairId && first.type !== second.type) {
+                    // Match!
+                    setTimeout(() => {
+                        playSound('match');
+                        first.element.classList.add('matched');
+                        second.element.classList.add('matched');
+                        matchedIds.add(first.pairId);
+                        matchedCount++;
+                        const pts = 250 * combo;
+                        score += pts;
+                        combo++;
+                        updateHUD();
+                        updateStatus(`MEMORY MATCH! Input/Output pair locked (+${pts} PTS)`, 'success');
+                        memoryFlippedCards = [];
+                        memoryLock = false;
+
+                        if (matchedCount === PAIRS_DATA.length) {
+                            handleStageClear();
+                        }
+                    }, 350);
+                } else {
+                    // No Match
+                    setTimeout(() => {
+                        playSound('wrong');
+                        combo = 1;
+                        updateHUD();
+                        first.element.classList.remove('flipped');
+                        second.element.classList.remove('flipped');
+                        updateStatus(`CARDS DID NOT MATCH! Keep memorizing their locations.`, 'error');
+                        memoryFlippedCards = [];
+                        memoryLock = false;
+                    }, 950);
+                }
+            }
+        }
+
+        // ============================================================================
+        // 7. STAGE CLEAR, MODES & NAVIGATION
+        // ============================================================================
+        function handleStageClear() {
+            stopTimer();
+            playSound('victory');
+            const accuracy = getAccuracyPercent();
+
+            document.getElementById('modal-score').textContent = score;
+            document.getElementById('modal-time').textContent = document.getElementById('hud-timer').textContent;
+            document.getElementById('modal-accuracy').textContent = `${accuracy}%`;
+
+            setTimeout(() => {
+                const modal = document.getElementById('victory-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }, 400);
+        }
+
+        function closeVictoryModalAndReplay() {
+            const modal = document.getElementById('victory-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            resetAndShuffleGame(true);
+        }
+
+        function closeVictoryModalAndViewKey() {
+            const modal = document.getElementById('victory-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            openAnswerKeyModal();
+        }
+
+        function setGameMode(mode) {
+            currentMode = mode;
+            const connectBtn = document.getElementById('modeBtn-connect');
+            const memoryBtn = document.getElementById('modeBtn-memory');
+            const connectWrapper = document.getElementById('board-connect-wrapper');
+            const memoryBoard = document.getElementById('board-memory');
+
+            if (mode === 'connect') {
+                connectBtn.className = 'px-3 py-1.5 rounded-lg font-arcade text-xs font-bold transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow';
+                memoryBtn.className = 'px-3 py-1.5 rounded-lg font-arcade text-xs font-bold transition-all text-slate-400 hover:text-white';
+                connectWrapper.classList.remove('hidden');
+                memoryBoard.classList.add('hidden');
+            } else {
+                memoryBtn.className = 'px-3 py-1.5 rounded-lg font-arcade text-xs font-bold transition-all bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow';
+                connectBtn.className = 'px-3 py-1.5 rounded-lg font-arcade text-xs font-bold transition-all text-slate-400 hover:text-white';
+                connectWrapper.classList.add('hidden');
+                memoryBoard.classList.remove('hidden');
+            }
+            resetAndShuffleGame(false);
+        }
+
+        function resetAndShuffleGame(randomizeDefs = true) {
+            stopTimer();
+            secondsElapsed = 0;
+            score = 0;
+            combo = 1;
+            matchedCount = 0;
+            attemptsCount = 0;
+            selectedTermId = null;
+            selectedDefId = null;
+            matchedIds.clear();
+
+            if (!randomizeDefs) {
+                activeConnectDefs = getDefaultShuffledDefinitions();
+            }
+
+            updateTimerDisplay();
+            updateHUD();
+
+            if (currentMode === 'connect') {
+                renderConnectBoard(randomizeDefs);
+                updateStatus('MISSION BRIEF: Select an <span class="text-cyan-400 font-bold">INPUT / OUTPUT TERM (1–5)</span> on the left and connect its laser to the matching <span class="text-pink-400 font-bold">DEFINITION (A–E)</span> on the right!');
+            } else {
+                renderMemoryBoard();
+                updateStatus('MEMORY MODE: Flip any two cards to match each <span class="text-cyan-400 font-bold">Slide 27 Input/Output Term</span> with its <span class="text-pink-400 font-bold">Definition</span>!');
+            }
+        }
+
+        function toggleInstructionsPanel() {
+            const panel = document.getElementById('instructions-panel');
+            panel.classList.toggle('hidden');
+            setTimeout(drawLaserConnections, 50);
+        }
+
+        // ============================================================================
+        // 8. INTERACTIVE ANSWER KEY MODAL
+        // ============================================================================
+        function openAnswerKeyModal() {
+            renderOfficialAnswerKeyList();
+            const modal = document.getElementById('answerkey-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeAnswerKeyModal() {
+            const modal = document.getElementById('answerkey-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function renderOfficialAnswerKeyList() {
+            const container = document.getElementById('answer-key-list');
+            container.innerHTML = '';
+            const letters = ['A', 'B', 'C', 'D', 'E'];
+
+            // Compute current active board mapping in case user clicked Shuffle
+            const currentMappings = PAIRS_DATA.map((item, idx) => {
+                const currentLetterIdx = activeConnectDefs.findIndex(d => d.id === item.id);
+                const activeLetter = currentLetterIdx !== -1 ? letters[currentLetterIdx] : item.defaultLetter;
+                return `${idx + 1} → ${activeLetter}`;
+            });
+
+            document.getElementById('live-board-key-text').textContent = `Current Board Order: ${currentMappings.join(' | ')}`;
+
+            PAIRS_DATA.forEach((item, idx) => {
+                const currentLetterIdx = activeConnectDefs.findIndex(d => d.id === item.id);
+                const activeLetter = currentLetterIdx !== -1 ? letters[currentLetterIdx] : item.defaultLetter;
+
+                const div = document.createElement('div');
+                div.className = 'p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3';
+                div.innerHTML = `
+                    <div class="md:w-5/12">
+                        <div class="flex items-center gap-2">
+                            <span class="font-arcade text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                                ${idx + 1} → ${activeLetter}
+                            </span>
+                            <span class="text-xs text-slate-400">${item.slideRef}</span>
+                        </div>
+                        <h4 class="font-arcade text-sm font-bold text-white mt-1">${idx + 1}. ${item.term}</h4>
+                    </div>
+                    <div class="md:w-7/12 text-sm text-slate-200 border-l-2 border-emerald-500/50 pl-3">
+                        <span class="font-arcade text-xs text-pink-400 font-bold mr-1">[${activeLetter}]</span> ${item.definition}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            initStarfield();
+            drawLaserConnections();
+        });
+
+        // Initialize on Window Load
+        window.onload = function() {
+            initStarfield();
+            animateStarfield();
+            resetAndShuffleGame(false);
+            renderOfficialAnswerKeyList();
+        };
+    </script>
+</body>
+</html>
